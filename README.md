@@ -3,8 +3,8 @@
 
 ## Goals
 Detection and tracking of vehicle on the road in near real-time. 
-![cover.png](attachment:cover.png)
-[Link to Video(abcd.mp4)
+![cover.png](/output_images/cover.png)
+[Link to Video(output_video.mp4)
 
 ## Implementation Overview
 1. Color histogram feature extraction
@@ -116,12 +116,9 @@ all(ax.imshow(im) for im,ax in zip(not_vehicle[:15], plt.subplots(3,5)[1].ravel(
 
 
 
-    True
 
 
-
-
-![png](output_18_1.png)
+![png](/output_images/not_vehicle.png)
 
 
 #### Vehicles
@@ -134,12 +131,10 @@ all(ax.imshow(im) for im,ax in zip(vehicle[:15], plt.subplots(3,5)[1].ravel()))
 
 
 
-    True
 
 
 
-
-![png](output_20_1.png)
+![png](/output_images/vehicle.png)
 
 
 ### Histogram Comparison
@@ -154,7 +149,7 @@ plt.tight_layout()
 ```
 
 
-![png](output_22_0.png)
+![png](/output_images/histogram_comparison.png)
 
 
 
@@ -167,7 +162,7 @@ plt.tight_layout()
 ```
 
 
-![png](output_23_0.png)
+![png](/output_images/binned_histogram_comparison.png)
 
 
 ## Feature Extractions
@@ -400,12 +395,11 @@ plt.imshow(img)
 
 
 
-    <matplotlib.image.AxesImage at 0x11f86bb00>
 
 
 
 
-![png](output_66_1.png)
+![png](/output_images/test_image.png)
 
 
 ### Small Sliding Window
@@ -424,12 +418,12 @@ all(ax.imshow(win[0]) for ax,win in zip(plt.subplots(5,20)[1].ravel(),small_wind
 
 
 
-    True
 
 
 
 
-![png](output_69_1.png)
+
+![png](/output_images/small_windows.png)
 
 
 #### Classification
@@ -469,12 +463,10 @@ plt.imshow(imout)
 
 
 
-    <matplotlib.image.AxesImage at 0x11f921470>
 
 
 
-
-![png](output_73_1.png)
+![png](/output_images/small_windows_classification.png)
 
 
 ### Medium Sliding Window
@@ -498,7 +490,7 @@ all(ax.imshow(im[0]) for ax,im in zip(plt.subplots(3,10)[1].ravel(),medium_windo
 
 
 
-![png](output_76_1.png)
+![png](/output_images/medium_windows.png)
 
 
 #### Classification
@@ -531,12 +523,10 @@ plt.imshow(imout)
 
 
 
-    <matplotlib.image.AxesImage at 0x11f57b710>
 
 
 
-
-![png](output_80_1.png)
+![png](/output_images/medium_windows_classification.png)
 
 
 #### Medium Window at Half Overlap
@@ -553,12 +543,7 @@ plt.imshow(imout)
 
 
 
-    <matplotlib.image.AxesImage at 0x1326121d0>
-
-
-
-
-![png](output_82_1.png)
+![png](/output_images/mediun_windows_with_overlap.png)
 
 
 #### Large Sliding Window
@@ -577,12 +562,11 @@ all(ax.imshow(im[0]) for ax,im in zip(plt.subplots(1,5)[1].ravel(),large_window_
 
 
 
-    True
 
 
 
 
-![png](output_85_1.png)
+![png](/output_images/large_windows.png)
 
 
 #### Classification
