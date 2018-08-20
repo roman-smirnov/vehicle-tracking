@@ -4,7 +4,8 @@
 ## Goals
 Detection and tracking of vehicle on the road in near real-time. 
 ![cover.png](/output_images/cover.png)
-[Link to Video(output_video.mp4)
+
+[Link to Video](output_video.mp4)
 
 ## Implementation Overview
 1. Color histogram feature extraction
