@@ -644,7 +644,8 @@ processed_video.write_videofile("output_video.mp4", audio=False, progress_bar=Fa
     [MoviePy] Done.
     [MoviePy] >>>> Video ready: output_video.mp4 
     
-
+[Link to Output Video](output_video.mp4)
+[Link to Source Video](project_video.mp4)
 
 ## Discussion
 
