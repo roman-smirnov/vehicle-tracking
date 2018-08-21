@@ -11,8 +11,8 @@ Detection and tracking of vehicle on the road in near real-time.
 1. Color histogram feature extraction
 2. Spatial bins subsamples feature extraction
 3. HOG feature extraction
-2. SVM linear classifier trained on a labeled binary class dataset
-3. Sliding window search with temporal heatmap false-positive reduction
+4. SVM linear classifier trained on a labeled binary class dataset
+5. Sliding window search with temporal heatmap false-positive reduction
 
 ## Libraries
 
@@ -27,12 +27,11 @@ import matplotlib.pyplot as plt
 from skimage.feature import hog
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.svm import LinearSVC
 import time
 from moviepy.editor import VideoFileClip
 ```
-
 ## Defaults Setup
 
 
@@ -77,7 +76,6 @@ not_vehicle = [cv2.imread(path, cv2.IMREAD_COLOR)[...,::-1] for path in not_vehi
 ```
 
 ## Exploratory Analysis
-__TODO__: what classes do we have? plot a few samples from each placemove loading the dataset to another place. where will we need to find these (larger image) ? show example images. How do their histograms compare? what about hog ? gradient? what about spatial pixel correlation? 
 
 ### Sample Count, Dimensionality, Data Type
 
@@ -205,7 +203,7 @@ def color_transform(img):
 
 ```python
 def extract_hist(img):
-    hist = list(map(lambda i: np.histogram(img[...,i], bins=64, range=(0,256))[0], range(3))) 
+    hist = list(map(lambda i: np.histogram(img[...,i], bins=128, range=(0,256))[0], range(3))) 
     return np.concatenate((hist[0], hist[1],hist[2]))
 ```
 
@@ -219,12 +217,16 @@ def extract_spatial(img):
 ```
 
 ### HOG 
-We compute a Histogram of Oriented Gradients for classifier feature input. The HOG feature map provides a scale invariant gradient description of our classification targets. We've set the parameters as follows: `orientations=9`, `pixels_per_cell=(8,8)`, `cells_per_block=(4,4)`. Parameters values were set after an extended period of empirical tunning and provide a compromise between performance and classification accuracy. Only a single channel was used for HOG feature extraction due to seemingly negligble effect on accuracy.
+We compute a Histogram of Oriented Gradients for classifier feature input. The HOG feature map provides a scale invariant gradient description of our classification targets. We've set the parameters as follows: `orientations=12`, `pixels_per_cell=(4,4)`, `cells_per_block=(4,4)`. Parameters values were set after an extended period of empirical tunning to ensure above 99% classifier accuracy.
 
 
 ```python
+hog_desc = cv2.HOGDescriptor((64,64),(4,4),(4,4),(4,4),12)
 def extract_hog(img):
-    return hog(img[...,2],9,(8,8),(4,4),'L2-Hys',False,False,True)    
+    hh = hog_desc.compute(img[...,0]).ravel()
+    sh = hog_desc.compute(img[...,1]).ravel()
+    vh = hog_desc.compute(img[...,2]).ravel()
+    return np.concatenate((hh,sh,vh))
 ```
 
 ### Combining Features
@@ -271,7 +273,7 @@ X.shape
 
 
 
-    (17760, 6864)
+    (17760, 12672)
 
 
 
@@ -329,12 +331,24 @@ We've utilized randomized grid hyperparameter search to estimate optimal classif
 
 
 ```python
-svc = LinearSVC()
+svc = GridSearchCV(LinearSVC(), {'C':[1,3,5,7,10]}, n_jobs=4)
 svc.fit(X_train, y_train)
 print(' Done Training')
 ```
 
      Done Training
+
+
+
+```python
+svc.best_params_
+```
+
+
+
+
+    {'C': 1}
+
 
 
 ### SVC Evaluation
@@ -346,7 +360,7 @@ print(' Done Training')
 print(' Test Accurcay =', round(svc.score(X_test, y_test), 4))
 ```
 
-     Test Accurcay = 0.9854
+     Test Accurcay = 0.9899
 
 
 #### Prediction Time
@@ -357,7 +371,7 @@ t=time.time(); n_predict = 1000;  svc.predict(X_test[0:n_predict]); t2 = time.ti
 print('',round(t2-t, 5), 'Seconds to predict', n_predict,'labels')
 ```
 
-     0.00759 Seconds to predict 1000 labels
+     0.01119 Seconds to predict 1000 labels
 
 
 ## Sliding Window Search
@@ -371,19 +385,27 @@ def slide_window(img, size, overlap):
     return list(map(lambda y,x: (img[y:y+size,x:x+size],(x,y)), sy,sx))
 ```
 
-### Detection Visualization
-We draw a rectangle extended from the base window detection coordinates.
+### Bounding Box Extraction and Grouping
 
 
 ```python
-def vis_detection(img, pred, win, size):
-    imout = img.copy()
+def get_rects(pred, win, size):
     pos = np.argwhere(pred==True)
     cord = np.array(win)[pos][...,1][...,0]
-    for c in cord:
-        cv2.rectangle(imout, c,(c[0]+size,c[1]+size) , (0, 0, 255), 3)
-    return imout
+    rects = [[int(c[0]),int(c[1]), int(c[0]+size), int(c[1]+size)] for c in cord]
+    return cv2.groupRectangles(rects*2, 1, 0.1)[0]
 ```
+
+### Bounding Box Visualization
+
+
+```python
+def draw_rects(img, rects):
+    for r in rects:
+        cv2.rectangle(img, (r[0],r[1]),(r[2],r[3]), (0, 0, 255), 3)
+    return img
+```
+
 
 ### Test Image
 
@@ -404,7 +426,7 @@ plt.imshow(img)
 
 
 ### Small Sliding Window
-Small windows reliably provide multiple detections per vehicles. However, they also produce a lot of false positives and carry a significant performance penalty. 
+Small windows (64x64 pixels) reliably provide multiple detections per vehicles. However, they also produce a lot of false positives and carry a significant performance penalty. 
 
 
 ```python
@@ -564,9 +586,6 @@ all(ax.imshow(im[0]) for ax,im in zip(plt.subplots(1,5)[1].ravel(),large_window_
 
 
 
-
-
-
 ![png](/output_images/large_windows.png)
 
 
@@ -585,31 +604,37 @@ pred
     array([False, False, False, False, False, False, False, False, False, False], dtype=bool)
 
 
-
 ## Video Pipeline
 The main distinction of the video pipeline is the addition of a temporal heatmap. The heatmap is implemented as an array of counters. Whereupon predictions are recognized as genuine when high counter values are reached.
 
 
 ```python
-WINDOW_SIZE = 64
-def process(img):
-    windows = slide_window(img, WINDOW_SIZE, 1.0)
-    features = list(map(lambda im: extract_features(cv2.resize(im[0],(64,64))), windows))
-    predictions = svc.predict(normalize(features))
-    process.heat = np.where(predictions==True,process.heat+1, process.heat-1)
-    process.heat = np.where(process.heat<1, 1, process.heat)
-    process.heat = np.where(process.heat>16, 16, process.heat)
-    area_heat = np.convolve(process.heat,np.ones(3)/3, mode='same').astype(np.uint8)
-    predictions = np.where(process.heat>8, True, False)
-    img = vis_detection(img, predictions, windows ,WINDOW_SIZE)
-    return img
-process.heat = np.ones(60, dtype=np.uint8)
+def heatmap(pred, heat):
+    heat = np.where(pred==True,heat+1, heat-1)
+    heat = np.where(heat<1, 1, heat)
+    heat = np.where(heat>32, 32, heat)
+    pred = np.where(heat>4, True, False)
+    return pred, heat
 ```
 
 
 ```python
-video = VideoFileClip("project_video.mp4")
-video = VideoFileClip("test_video.mp4")
+WINDOW_SIZE = 96
+def process(img):
+    windows = slide_window(img, WINDOW_SIZE, 0.3)
+    features = list(map(lambda im: extract_features(cv2.resize(im[0],(64,64))), windows))
+    predictions = svc.predict(normalize(features))
+    predictions, process.heat = heatmap(predictions, process.heat)
+    rects = get_rects(predictions, windows, WINDOW_SIZE)
+    img = draw_rects(img,rects)
+    return img
+process.heat = np.ones(322, dtype=np.uint8)
+```
+
+
+```python
+video = VideoFileClip("project_video.mp4")#.subclip(27,30)
+# video = VideoFileClip("test_video.mp4")
 processed_video = video.fl_image(process)
 processed_video.write_videofile("output_video.mp4", audio=False, progress_bar=False)
 ```
@@ -623,13 +648,11 @@ processed_video.write_videofile("output_video.mp4", audio=False, progress_bar=Fa
 
 ## Discussion
 
-Firsly, there are a lof of false-positives. There's much improvment to be gained by data augmentation
-and classifier tweaking. 
+1. Are a lof of false-positives. There's much improvment to be gained by data augmentation
+and classifier tweaking or changing it altogether. 
 
-Secondly, The implementation is doesn't make use of possible data parallelism. 
+2. The implementation is doesn't make use of possible data parallelism. 
 There's much room for improvment in this regard. Currently, the model suffers from very low overall performance.
 Furthermore, Some features are re-computed multiple times.
 
-Thirdly, and most obviously, no detection blending (combining smaller detections) was implemented. 
-
-Lastly, no multi-scale, adaptive, randomized, etc sliding window techniques were used. 
+3. No multi-scale, adaptive, randomized, etc sliding window techniques were used. 
